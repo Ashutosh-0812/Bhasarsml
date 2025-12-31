@@ -1,8 +1,13 @@
 # Frontend Dockerfile
+# Updated: 2025-12-31 - Fixed dist path
 FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
+
+# Accept build argument for API URL
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # Copy package files
 COPY package*.json ./
@@ -20,7 +25,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copy built files from builder
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
