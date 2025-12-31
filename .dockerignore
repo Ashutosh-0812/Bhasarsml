@@ -7,7 +7,7 @@ npm-debug.log
 .env.local
 .env.*.local
 
-# Client folder (has its own Dockerfile)
+# Client folder (deploy separately)
 client
 
 # Git files

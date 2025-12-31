@@ -103,17 +103,18 @@ app.use((err, req, res, next) => {
 
 // -------- Serve React App for all other routes (SPA fallback) -------- //
 
-app.get('*', (req, res) => {
-  const clientBuildPath = path.join(__dirname, 'client', 'build', 'index.html');
+// Only serve frontend in production if build exists
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, 'client', 'build');
   
   if (fs.existsSync(clientBuildPath)) {
-    res.sendFile(clientBuildPath);
-  } else {
-    res.status(404).json({ 
-      error: 'React app not found. Please run "npm run build" in the client directory.' 
+    app.use(express.static(clientBuildPath));
+    
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(clientBuildPath, 'index.html'));
     });
   }
-});
+}
 
 // -------- Connect to Database & Start Server -------- //
 
