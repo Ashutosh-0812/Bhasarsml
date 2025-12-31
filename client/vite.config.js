@@ -20,12 +20,16 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://bhasarsml-backend-ru2tyv-fd913f-72-61-171-146.traefik.me',
         changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path,
       },
       '/data': {
-        target: 'http://localhost:3000',
+        target: 'https://bhasarsml-backend-ru2tyv-fd913f-72-61-171-146.traefik.me',
         changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path,
       }
     }
   },
