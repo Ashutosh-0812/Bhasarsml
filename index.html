@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSML Annotation</title>
+
+    <!-- Bootstrap -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
+
+    <style>
+      body {
+        background: #fafafa;
+      }
+      .bg-gray {
+        background-color: rgba(231, 231, 232, 0.4);
+      }
+      textarea {
+        resize: vertical;
+        font-family: monospace;
+      }
+      .rendered-transcript {
+        background: #f9f9f9;
+        height: 150px;
+        overflow-y: auto;
+        border-radius: 6px;
+        padding: 0.75rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container-fluid bg-white sticky-top">
+      <div class="container py-2">
+        <h4 class="text-center">
+          RSML Annotator
+          <button
+            type="button"
+            class="btn btn-outline-primary btn-sm ms-2"
+            data-bs-toggle="modal"
+            data-bs-target="#guidelinesModal"
+          >
+            <i class="bi bi-keyboard"></i> Shortcuts
+          </button>
+          <div class="text-end">
+            <button id="saveBtn" class="btn btn-success">
+              <i class="bi bi-save"></i> Save RSML
+            </button>
+          </div>
+        </h4>
+      </div>
+    </div>
+    <div class="container-fluid bg-white fixed-bottom">
+      <!-- Batch + File Select -->
+      <div class="container py-4">
+        <div class="row">
+          <div class="col-12 mb-3 d-flex gap-2 justify-content-between">
+            <button id="prevBtn" class="btn btn-outline-secondary">
+              <i class="bi bi-chevron-left"></i> Prev
+            </button>
+            <button id="nextBtn" class="btn btn-outline-secondary">
+              Next <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Batch</label>
+            <select id="batchSelect" class="form-select"></select>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">File Number</label>
+            <select id="fileSelect" class="form-select" disabled></select>
+          </div>
+
+          <!-- ⬇️ NEW Load Button -->
+          <div class="col-md-2 d-flex align-items-end">
+            <button id="loadBtn" class="btn btn-primary w-100">Load</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container py-5 mb-5">
+      <!-- Segments -->
+      <div id="segmentContainer" class="pb-5 mb-5"></div>
+    </div>
+
+    <!-- =================== RSML MODAL =================== -->
+    <div class="modal fade" id="guidelinesModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title fw-semibold">RSML Annotation Shortcuts</h6>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body small">
+            <p><strong>@ — Noise / Disfluency</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>@noise</code>, <code>@background-laughter</code>,
+              <code>@umm</code>, <code>@cough</code>
+            </p>
+            <p><strong># — Entities</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>#PER{राम}(राम)</code><br />
+              <code>#ORG{भारतीय रेल्वे}(Indian Railways)</code><br />
+              <code>#GPE{रायालसीमा}(రాయలసీమ)</code>
+            </p>
+            <p><strong>[ ] — Code-mix</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>[स्टडी](study)</code>
+            </p>
+            <p><strong>&lt; &gt; — Mispronunciation</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>&lt;समझनाहीं&gt;(समझ नहीं)</code>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- =================== TOASTER =================== -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1080">
+      <div
+        id="toastContainer"
+        class="toast align-items-center text-bg-primary border-0"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <div class="d-flex">
+          <div class="toast-body" id="toastMessage">Saved successfully!</div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== LOADER OVERLAY =================== -->
+    <div
+      id="loaderOverlay"
+      class="position-fixed top-0 start-0 w-100 h-100 d-none d-flex justify-content-center align-items-center bg-white bg-opacity-75"
+      style="z-index: 2000"
+    >
+      <div
+        class="spinner-border text-primary"
+        role="status"
+        style="width: 3rem; height: 3rem"
+      >
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <!-- =================== SCRIPT =================== -->
+    <script type="module">
+      import RSMLAnnotator from "https://cdn.jsdelivr.net/npm/rsml@1.1.4/rsml.esm.js";
+
+      const batchSelect = document.getElementById("batchSelect");
+      const fileSelect = document.getElementById("fileSelect");
+      const segmentContainer = document.getElementById("segmentContainer");
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      const loadBtn = document.getElementById("loadBtn");
+      const saveBtn = document.getElementById("saveBtn");
+
+      const AUDIO_BASE = "data/audio/";
+      let batches = [];
+      let currentBatchIndex = 0;
+      let files = [];
+      let currentFileIndex = 0;
+
+      function getQueryParams() {
+        const params = new URLSearchParams(window.location.search);
+        const batch = Number(params.get("batch"));
+        const file = Number(params.get("file"));
+        return { batch, file };
+      }
+
+      function updateURL(batch, file) {
+        const newUrl = `${window.location.pathname}?batch=${batch}&file=${file}`;
+        history.replaceState({}, "", newUrl);
+      }
+
+      async function loadBatches() {
+        const res = await fetch("/batches");
+        const { max_batch } = await res.json();
+
+        batches = Array.from({ length: max_batch }, (_, i) => i + 1);
+
+        batchSelect.innerHTML = `<option disabled selected>Select Batch</option>`;
+        batches.forEach((b) => {
+          const opt = document.createElement("option");
+          opt.value = b;
+          opt.textContent = b;
+          batchSelect.appendChild(opt);
+        });
+      }
+
+      async function loadFiles(batch) {
+        const res = await fetch(`/batch/${batch}/files`);
+        const { max_file } = await res.json();
+
+        files = Array.from({ length: max_file }, (_, i) => i + 1);
+        fileSelect.disabled = false;
+        fileSelect.innerHTML = `<option disabled selected>Select File</option>`;
+        files.forEach((f) => {
+          const opt = document.createElement("option");
+          opt.value = f;
+          opt.textContent = f;
+          fileSelect.appendChild(opt);
+        });
+      }
+
+      async function loadSegments() {
+        const batch = batches[currentBatchIndex];
+        const file = files[currentFileIndex];
+
+        const res = await fetch(`/batch/${batch}/file/${file}`);
+        const rows = await res.json();
+
+        segmentContainer.innerHTML = "";
+
+        rows.forEach((row, idx) => {
+          const normalized = row.unsanitized_normalized || "";
+          const transcript = row.rsml || row.unsanitized_verbatim || "";
+          const audioPath = row.audio ? AUDIO_BASE + row.audio : null;
+
+          const card = document.createElement("div");
+          card.className = "card mb-4 p-3 segment-card";
+          card.dataset.segment = row.segment; // machine-readable
+
+          const audioHTML = audioPath
+            ? `<audio controls preload="metadata" style="width:100%">
+           <source src="${audioPath}">
+         </audio>`
+            : `<div class="text-muted small">⚠️ No audio</div>`;
+
+          card.innerHTML = `
+      <!-- SEGMENT HEADER -->
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="badge border border-black text-black rounded-circle fs-6">
+          ${row.segment ?? idx}
+        </span>
+      </div>
+
+      <div class="mb-2 text-muted small">
+        <strong>${normalized}</strong>
+      </div>
+
+      <div class="row mb-2">
+        <div class="col-md-6">
+          <textarea class="form-control tag-textarea" rows="5">${transcript}</textarea>
+        </div>
+        <div class="col-md-6">
+          <div class="rendered-transcript card p-2"></div>
+        </div>
+      </div>
+
+      ${audioHTML}
+    `;
+
+          segmentContainer.appendChild(card);
+
+          const ta = card.querySelector(".tag-textarea");
+          const out = card.querySelector(".rendered-transcript");
+          new RSMLAnnotator({ textarea: ta, output: out });
+        });
+      }
+      batchSelect.addEventListener("change", async () => {
+        currentBatchIndex = batchSelect.selectedIndex - 1;
+        const batch = batches[currentBatchIndex];
+        await loadFiles(batch);
+        currentFileIndex = 0;
+        fileSelect.selectedIndex = 1;
+        updateURL(batch, files[0]);
+      });
+
+      fileSelect.addEventListener("change", async () => {
+        currentFileIndex = fileSelect.selectedIndex - 1;
+        const batch = batches[currentBatchIndex];
+        const file = files[currentFileIndex];
+        updateURL(batch, file);
+      });
+
+      prevBtn.addEventListener("click", async () => {
+        if (currentFileIndex > 0) {
+          currentFileIndex--;
+        } else if (currentBatchIndex > 0) {
+          currentBatchIndex--;
+          await loadFiles(batches[currentBatchIndex]);
+          currentFileIndex = files.length - 1;
+        } else return;
+
+        batchSelect.selectedIndex = currentBatchIndex + 1;
+        fileSelect.selectedIndex = currentFileIndex + 1;
+        updateURL(batches[currentBatchIndex], files[currentFileIndex]);
+        await loadSegments();
+      });
+
+      nextBtn.addEventListener("click", async () => {
+        if (currentFileIndex < files.length - 1) {
+          currentFileIndex++;
+        } else if (currentBatchIndex < batches.length - 1) {
+          currentBatchIndex++;
+          await loadFiles(batches[currentBatchIndex]);
+          currentFileIndex = 0;
+        } else return;
+
+        batchSelect.selectedIndex = currentBatchIndex + 1;
+        fileSelect.selectedIndex = currentFileIndex + 1;
+        updateURL(batches[currentBatchIndex], files[currentFileIndex]);
+        await loadSegments();
+      });
+
+      loadBtn.addEventListener("click", async () => {
+        if (batchSelect.selectedIndex <= 0 || fileSelect.selectedIndex <= 0) {
+          alert("⚠️ Please select both a batch and a file.");
+          return;
+        }
+        updateURL(batches[currentBatchIndex], files[currentFileIndex]);
+        showLoader();
+        await loadSegments();
+        hideLoader();
+      });
+
+      saveBtn.addEventListener("click", async () => {
+        showLoader();
+        const batch = batches[currentBatchIndex];
+        const file = files[currentFileIndex];
+        const cards = document.querySelectorAll(".segment-card");
+        const payload = [];
+
+        cards.forEach((card) => {
+          const ta = card.querySelector(".tag-textarea");
+          if (!ta) return;
+          payload.push({
+            segment: Number(card.dataset.segment),
+            rsml: ta.value,
+          });
+        });
+
+        const toastEl = document.getElementById("toastContainer");
+        const toastMsg = document.getElementById("toastMessage");
+        const toast = new bootstrap.Toast(toastEl);
+
+        try {
+          const res = await fetch(`/batch/${batch}/file/${file}/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            const msg = await res.json();
+            toastMsg.textContent = "✅ " + msg.message;
+            toastEl.classList.remove("text-bg-danger");
+            toastEl.classList.add("text-bg-success");
+          } else {
+            toastMsg.textContent = "❌ Failed to save RSML";
+            toastEl.classList.remove("text-bg-success");
+            toastEl.classList.add("text-bg-danger");
+          }
+
+          toast.show();
+        } catch {
+          toastMsg.textContent = "❌ Error: Could not save RSML";
+          toastEl.classList.remove("text-bg-success");
+          toastEl.classList.add("text-bg-danger");
+          toast.show();
+        }
+
+        hideLoader();
+      });
+
+      function showLoader() {
+        document.getElementById("loaderOverlay").classList.remove("d-none");
+        document
+          .querySelectorAll("button, select")
+          .forEach((el) => (el.disabled = true));
+      }
+
+      function hideLoader() {
+        document.getElementById("loaderOverlay").classList.add("d-none");
+        document
+          .querySelectorAll("button, select")
+          .forEach((el) => (el.disabled = false));
+      }
+
+      async function init() {
+        await loadBatches();
+        const { batch, file } = getQueryParams();
+
+        if (batch && file) {
+          if (batches.includes(batch)) {
+            currentBatchIndex = batches.indexOf(batch);
+            batchSelect.selectedIndex = currentBatchIndex + 1;
+            await loadFiles(batch);
+
+            if (files.includes(file)) {
+              currentFileIndex = files.indexOf(file);
+              fileSelect.selectedIndex = currentFileIndex + 1;
+              await loadSegments();
+            }
+          }
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>
