@@ -57,6 +57,30 @@ if (fs.existsSync(clientBuildPath)) {
 
 // -------- API Routes -------- //
 
+// Root endpoint - API information
+app.get('/', (req, res) => {
+  res.json({
+    name: 'BhashaCheck API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        me: 'GET /api/auth/me'
+      },
+      voice: {
+        batches: 'GET /api/batches/list',
+        files: 'GET /api/batch/:batch_id/files/list',
+        segments: 'GET /api/batch/:batch_id/file/:file_number',
+        save: 'POST /api/batch/:batch_id/file/:file_number/save'
+      }
+    },
+    documentation: 'See README.md for full API documentation'
+  });
+});
+
 // Health check endpoint (public)
 app.get('/api/health', async (req, res) => {
   try {
