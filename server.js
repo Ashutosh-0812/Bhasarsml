@@ -12,7 +12,7 @@ const authRoutes = require('./routes/authRoutes');
 
 // ---------------- CONFIG ---------------- //
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const AUDIO_DIR = path.join(__dirname, 'data', 'audio');
 
 // -------------------------------------- //
