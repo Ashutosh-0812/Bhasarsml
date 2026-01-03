@@ -1,4 +1,4 @@
-# Frontend Dockerfile - Using Node.js serve
+# Frontend Dockerfile - Using Express server
 FROM node:18-alpine
 
 # Set working directory
@@ -11,8 +11,8 @@ ENV VITE_API_URL=$VITE_API_URL
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies including serve
-RUN npm ci && npm install -g serve
+# Install dependencies
+RUN npm ci --only=production
 
 # Copy application code
 COPY . .
@@ -23,5 +23,5 @@ RUN npm run build
 # Expose port
 EXPOSE 80
 
-# Start serve with SPA support on port 80
-CMD ["serve", "-s", "build", "-l", "80"]
+# Start Express server
+CMD ["node", "server.js"]
