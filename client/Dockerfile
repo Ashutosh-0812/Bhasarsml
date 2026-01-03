@@ -1,6 +1,5 @@
-# Frontend Dockerfile
-# Updated: 2025-12-31 - Fixed dist path
-FROM node:18-alpine AS builder
+# Frontend Dockerfile - Using Node.js serve
+FROM node:18-alpine
 
 # Set working directory
 WORKDIR /app
@@ -12,8 +11,8 @@ ENV VITE_API_URL=$VITE_API_URL
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies including serve
+RUN npm ci && npm install -g serve
 
 # Copy application code
 COPY . .
@@ -21,18 +20,8 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Production stage with nginx
-FROM nginx:alpine
-
-# Copy built files from builder
-COPY --from=builder /app/build /usr/share/nginx/html
-
-# Remove default nginx config and use ours
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
 # Expose port
-EXPOSE 80
+EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start serve with SPA support
+CMD ["serve", "-s", "build", "-l", "3000"]
