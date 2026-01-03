@@ -1,4 +1,4 @@
-# BhashaCheck - MERN Stack Application
+#     Check - MERN Stack Application
 
 A full-stack MERN (MongoDB, Express, React, Node.js) application for voice data annotation with RSML (Rich Speech Markup Language) support, featuring JWT authentication and role-based access control.
 
