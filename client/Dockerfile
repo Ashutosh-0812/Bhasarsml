@@ -1,5 +1,5 @@
-# Frontend Dockerfile - Using Express server
-FROM node:18-alpine
+# Frontend Dockerfile - Multi-stage with nginx
+FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -20,11 +20,17 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Remove devDependencies after build
-RUN npm prune --production
+# Production stage with nginx
+FROM nginx:alpine
+
+# Copy built files from builder
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose port
 EXPOSE 80
 
-# Start Express server
-CMD ["node", "server.js"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
