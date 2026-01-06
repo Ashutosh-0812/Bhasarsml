@@ -23,8 +23,10 @@ const app = express();
 
 // CORS Middleware
 app.use(cors({
-  origin: '*',
-  credentials: true
+  origin: process.env.CLIENT_URL || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Body Parser Middleware
